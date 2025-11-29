@@ -30,8 +30,18 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
+# settings.py
+
 INSTALLED_APPS = [
+    # Tambahkan ini:
+    'django_bootstrap5', 
+    
+    # Aplikasi Pihak Ketiga
     'jazzmin',
+    'django_tables2', # Anda mungkin juga memerlukan ini untuk tabel
+    'django_filters', # Anda mungkin juga memerlukan ini untuk filter
+    
+    # Aplikasi Bawaan Django
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -39,6 +49,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    
+    # Aplikasi Lokal
     'core',
 ]
 
@@ -129,29 +141,85 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
+# settings.py
+# settings.py
+
 JAZZMIN_SETTINGS = {
+    # TITLE AND BRANDING
     "site_title": "PasirMas Admin", 
     "site_header": "PasirMas Administration",
     "welcome_sign": "Welcome to PasirMas Admin Panel",
     "site_brand": "Pasir Mas Atambua",
     "copyright": "PasirMas © 2024",
+    
+    # ICONS
     "icons": {
         "auth": "fas fa-users-cog",
         "core": "fas fa-box-open",
         "auth.user": "fas fa-user-shield",
+        "auth.group": "fas fa-users",
         "core.pelanggan": "fas fa-user",
         "core.barang": "fas fa-box",
         "core.penyewaan": "fas fa-handshake",
     },
     
-    # "show_ui_builder": True,
+    # SIDEBAR
+    "show_sidebar": True,
+    "navigation_expanded": True,
     
+    # =======================================================
+    # NAV BAR (USERMENU LINKS) - DROPDOWN LAPORAN (IKON BARU 🔥)
+    # =======================================================
+    "usermenu_links": [
+        # Tautan User default (tetap dipertahankan)
+        {"model": "auth.user"},
+        
+        # 🔥 DROPDOWN KUSTOM LAPORAN DENGAN IKON RELEVAN
+        {"name": "Laporan", "icon": "fas fa-chart-pie", "url": "admin:report_penyewaan", "children": [
+            # Ikon untuk setiap laporan
+            {"name": "Laporan Penyewaan", "url": "admin:report_penyewaan", "icon": "fas fa-file-contract", "new_window": False},
+            {"name": "Laporan Keuangan", "url": "admin:report_keuangan", "icon": "fas fa-coins"},
+            {"name": "Laporan Status Barang", "url": "admin:report_barang", "icon": "fas fa-boxes"},
+            {"name": "Laporan Data Pelanggan", "url": "admin:report_pelanggan", "icon": "fas fa-users-cog"},
+        ]},
+    ],
+    
+    # =======================================================
+    # SIDEBAR LINKS 
+    # =======================================================
+    "sidebar_links": [
+        # Dashboard
+        {"name": "Dashboard", "url": "admin:index", "icon": "fas fa-tachometer-alt"},
+
+        # Pemisah Section: Manajemen Data
+        {"section": "Manajemen Data"},
+        {"model": "core.Pelanggan", "icon": "fas fa-users"},
+        {"model": "core.Barang", "icon": "fas fa-box"},
+        {"model": "core.Penyewaan", "icon": "fas fa-handshake"},
+        
+        # Pemisah Section: Pengaturan Sistem
+        {"section": "Pengaturan Sistem"},
+        {"app": "auth", "icon": "fas fa-users-cog"}, 
+    ],
+    
+    # Urutan Model (Untuk Halaman Utama Admin)
     "order_with_respect_to": [
-        "auth", "core",
+        "auth", 
         "core.Pelanggan",
         "core.Barang", 
         "core.Penyewaan",
-        ],
+    ],
+    
+    # UI Tweaks (opsional)
+    "ui_tweaks": {
+        "navbar_small": False,
+        "sidebar_fixed": True,
+        "sidebar_compact": False,
+        "sidebar_nav_child_indent": True,
+        "sidebar_nav_small_text": False,
+        "body_small": False,
+        "brand_small": False,
+    }
 }
 
 JAZZMIN_UI_TWEAKS = {

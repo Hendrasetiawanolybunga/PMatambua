@@ -1,0 +1,63 @@
+{% extends "admin/base_site.html" %} 
+{% load django_bootstrap5 %}
+{% load render_table from django_tables2 %}
+
+{% block content %}
+<!-- 
+    Tidak perlu tambahan div wrapper di sini. 
+    Konten langsung diletakkan di dalam card dan akan mengisi 
+    container-fluid yang disediakan oleh base_site.html.
+-->
+<div class="card card-primary card-outline w-100">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-file-alt"></i> {{ title }}</h3>
+        {% if table.page %}
+        <div class="card-tools">
+             <a href="{% url request.resolver_match.url_name|add:'_pdf' %}?{{ current_filter_params }}" class="btn btn-danger btn-sm" target="_blank">
+                <i class="fas fa-file-pdf"></i> Unduh PDF
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="card-body">
+        
+        <form method="get" class="mb-4">
+            <div class="row">
+                {% for field in filter.form %}
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            {% bootstrap_field field show_label=False %}
+                        </div>
+                    </div>
+                {% endfor %}
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary mr-2"><i class="fas fa-search"></i> Filter</button>
+                    <a href="." class="btn btn-secondary"><i class="fas fa-redo"></i> Reset</a>
+                </div>
+            </div>
+        </form>
+
+        <hr>
+
+        {% if table.page %}
+        <div class="mb-3 d-flex justify-content-between align-items-center">
+            <p>Ditemukan: <b>{{ table.paginator.count }}</b> baris data.</p>
+            <!-- Tombol unduh dipindahkan ke card-header untuk tampilan yang lebih rapi -->
+        </div>
+        {% endif %}
+
+        {% if total_pendapatan is not None %}
+        <div class="alert alert-success mt-3">
+            Total Pendapatan Terfilter: <b>Rp {{ total_pendapatan|floatformat:2 }}</b>
+        </div>
+        {% endif %}
+        
+        <!-- Tabel Laporan -->
+        <div class="table-responsive">
+            {% render_table table %}
+        </div>
+        
+    </div>
+</div>
+{% endblock content %}

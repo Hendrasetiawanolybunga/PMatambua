@@ -1,12 +1,14 @@
+# core/admin.py
+
 from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Sum, F
 from .models import Pelanggan, Barang, Penyewaan, DetailSewa
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User # Penting: Import User
 from django.contrib.admin.sites import NotRegistered 
+from django.urls import reverse # Diperlukan untuk membuat URL link laporan
 
 # Asumsi: Anda memiliki file views.py dengan fungsi admin_dashboard_context
-# Jika views.py tidak ada atau tidak memiliki fungsi tersebut, baris ini akan menyebabkan error
 try:
     from .views import admin_dashboard_context 
 except ImportError:
@@ -17,27 +19,25 @@ except ImportError:
             'total_pendapatan': 0, 'bulan_label': [], 'pendapatan_bulanan': []
         }
     
-
-# ===============================================
-# LANGKAH 1: UNREGISTER GROUP DARI DEFAULT SITE
-# ===============================================
-# Lakukan unregister dari admin.site bawaan sebelum menimpanya.
+# --- Langkah 1: UNREGISTER GROUP DAN USER DARI DEFAULT SITE ---
 try:
     admin.site.unregister(Group)
 except NotRegistered:
     pass 
+    
+try:
+    admin.site.unregister(User)
+except NotRegistered:
+    pass
 
 
-# ===============================================
-# LANGKAH 2: MEMBUAT DAN MENIMPA CUSTOM ADMIN SITE
-# ===============================================
+# --- Langkah 2: MEMBUAT DAN MENIMPA CUSTOM ADMIN SITE ---
 class CustomAdminSite(admin.AdminSite):
     index_template = 'admin/custom_index.html'
     site_header = 'ADMINISTRASI PENYEWAAN'
     site_title = 'Admin Penyewaan'
 
     def index(self, request, extra_context=None):
-        # Memuat data agregasi dari fungsi views
         context = admin_dashboard_context(request) 
         
         if extra_context:
@@ -45,15 +45,75 @@ class CustomAdminSite(admin.AdminSite):
             
         return super().index(request, context)
 
+    # PERBAIKAN UTAMA: Memastikan app_list bukan None dan menambahkan Laporan
+    def get_app_list(self, request, app_label=None):
+        
+        app_list = super().get_app_list(request)
+        
+        # PERBAIKAN 1: Mencegah 'NoneType' object is not iterable dari Jazzmin
+        if app_list is None:
+            app_list = []
+
+        # 1. Definisikan Links Laporan Kustom (Nama URL tanpa 'admin:' karena di-include di path 'admin/')
+        report_models = [
+            {
+                'name': 'Laporan Penyewaan',
+                'object_name': 'laporan_penyewaan',
+                'perms': {'view': request.user.has_perm('core.view_penyewaan')},
+                'admin_url': reverse('report_penyewaan'), # PERBAIKAN 2: Hapus 'admin:'
+            },
+            {
+                'name': 'Laporan Keuangan',
+                'object_name': 'laporan_keuangan',
+                'perms': {'view': request.user.has_perm('core.view_penyewaan')},
+                'admin_url': reverse('report_keuangan'),
+            },
+            {
+                'name': 'Laporan Status Barang',
+                'object_name': 'laporan_barang',
+                'perms': {'view': request.user.has_perm('core.view_detailsewa')},
+                'admin_url': reverse('report_barang'),
+            },
+            {
+                'name': 'Laporan Data Pelanggan',
+                'object_name': 'laporan_pelanggan',
+                'perms': {'view': request.user.has_perm('core.view_pelanggan')},
+                'admin_url': reverse('report_pelanggan'),
+            },
+        ]
+
+        # 2. Buat "Aplikasi" baru untuk Laporan
+        reports_app = {
+            'name': 'Laporan',
+            'app_label': 'reports_custom', 
+            'app_url': '',
+            'has_module_perms': True,
+            'models': report_models,
+        }
+
+        # 3. Masukkan Laporan ke dalam daftar aplikasi (app_list)
+        # Cari index aplikasi 'core'
+        core_index = next((i for i, app in enumerate(app_list) if app['app_label'] == 'core'), -1)
+        
+        if core_index != -1:
+            app_list.insert(core_index + 1, reports_app)
+        else:
+            app_list.append(reports_app)
+
+        return app_list
+
 # Instansiasi Custom Admin Site
 custom_admin_site = CustomAdminSite(name='custom_admin')
 # Menimpa variabel admin.site global dengan instance kustom
 admin.site = custom_admin_site 
 
 
-# ===============================================
-# LANGKAH 3: PENDAFTARAN MODEL KE CUSTOM ADMIN SITE
-# ===============================================
+# --- Langkah 3: PENDAFTARAN MODEL KE CUSTOM ADMIN SITE ---
+
+# Daftarkan User dan Group ke Custom Admin Site
+custom_admin_site.register(User)
+custom_admin_site.register(Group)
+
 
 # --- Admin Class untuk Pelanggan ---
 @admin.register(Pelanggan, site=custom_admin_site)
@@ -63,7 +123,6 @@ class PelangganAdmin(admin.ModelAdmin):
     list_filter = ('namaPelanggan',)
     
     def aksi_link(self, obj):
-        # Menggunakan idPelanggan
         edit_url = f'/admin/core/pelanggan/{obj.idPelanggan}/change/' 
         edit_icon = f'<a href="{edit_url}" title="Edit"><i class="fas fa-edit"></i></a>'
         delete_url = f'/admin/core/pelanggan/{obj.idPelanggan}/delete/'
@@ -86,7 +145,6 @@ class BarangAdmin(admin.ModelAdmin):
     foto_preview.short_description = 'Foto'
     
     def aksi_link(self, obj):
-        # Menggunakan idBarang
         edit_url = f'/admin/core/barang/{obj.idBarang}/change/' 
         edit_icon = f'<a href="{edit_url}" title="Edit"><i class="fas fa-edit"></i></a>'
         delete_url = f'/admin/core/barang/{obj.idBarang}/delete/'
@@ -99,7 +157,6 @@ class BarangAdmin(admin.ModelAdmin):
 class DetailSewaInline(admin.TabularInline):
     model = DetailSewa
     fields = ('idBarang', 'jumlahBarang', 'subTotal')
-    # readonly_fields adalah kunci untuk mencegah pengguna mengedit subTotal
     readonly_fields = ('subTotal',) 
     extra = 1
 
@@ -118,59 +175,42 @@ class PenyewaanAdmin(admin.ModelAdmin):
             'fields': ('idPelanggan', 'tanggalAcara', 'tanggalPembongkaran', 'durasiSewa', 'alamatPemasangan')
         }),
         ('Detail Pembayaran dan Status', {
-            # totalBayar harus ada di fields agar bisa ditampilkan, tapi di readonly_fields
             'fields': ('totalBayar', 'statusSewa', 'feedback'), 
             'classes': ('collapse',),
         })
     )
-    # Tampilkan totalBayar dan tanggalPesan (auto_now_add) sebagai read-only di form
     readonly_fields = ('totalBayar', 'tanggalPesan')
     
     def calculate_total_bayar(self, penyewaan_instance):
-        """Menghitung totalBayar dari semua subTotal di DetailSewa."""
-        
-        # Agregasi semua subTotal (yang sudah dihitung saat DetailSewa.save())
         total_sum = penyewaan_instance.detailsewa_set.aggregate(
             total=Sum(F('subTotal'))
         )['total']
         
-        # Perbarui totalBayar di objek Penyewaan
         if total_sum is not None:
-            # Pastikan totalBayar adalah DecimalField yang valid sebelum disimpan
             penyewaan_instance.totalBayar = total_sum
             penyewaan_instance.save(update_fields=['totalBayar'])
 
     def save_model(self, request, obj, form, change):
-        # 1. Simpan objek Penyewaan terlebih dahulu (Ini penting untuk mendapatkan PK/ID)
         super().save_model(request, obj, form, change)
         
         if change:
-             # Untuk kasus edit, kita panggil calculate_total_bayar di sini juga
-             self.calculate_total_bayar(obj)
-        
+            self.calculate_total_bayar(obj)
+            
     def save_formset(self, request, form, formset, change):
-        # 1. Simpan inline commit=False
         instances = formset.save(commit=False)
         for instance in instances:
-            # Panggil method save() di model DetailSewa.
-            # Sekarang, method save() DetailSewa akan menghitung subTotal DAN menyesuaikan stok.
             if isinstance(instance, DetailSewa):
                 instance.save() 
         
-        # 2. Simpan relasi Many-to-Many jika ada (meskipun tidak ada di sini, ini adalah praktik baik)
         formset.save_m2m()
         
-        # 3. Handle penghapusan inlines (Ini akan memanggil method delete() di model DetailSewa, yang mengembalikan stok)
         for obj in formset.deleted_objects:
             obj.delete()
 
-        # 4. Setelah semua DetailSewa tersimpan/dihapus, hitung ulang totalBayar Penyewaan utama.
         if form.instance.pk:
             self.calculate_total_bayar(form.instance)
-        
-    
+            
     def aksi_link(self, obj):
-        # Menggunakan idPenyewaan
         edit_url = f'/admin/core/penyewaan/{obj.idPenyewaan}/change/' 
         edit_icon = f'<a href="{edit_url}" title="Edit"><i class="fas fa-edit"></i></a>'
         delete_url = f'/admin/core/penyewaan/{obj.idPenyewaan}/delete/'

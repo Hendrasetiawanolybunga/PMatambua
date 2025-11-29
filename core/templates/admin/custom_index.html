@@ -136,7 +136,8 @@
             <div class="col-md-12">
                 <div class="card shadow-lg mb-4">
                     <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">Grafik Pendapatan Bulanan (12 Bulan Terakhir)</h6>
+                        <!-- 🔥 JUDUL DIPERBARUI -->
+                        <h6 class="m-0 font-weight-bold text-primary">Grafik Pendapatan Bulanan (6 Bulan Terakhir)</h6>
                     </div>
                     <div class="card-body">
                         <!-- Canvas ditampilkan TANPA KONDISI IF (Walaupun data kosong) -->
@@ -176,18 +177,18 @@
                         legend: { position: 'top' },
                         tooltip: {
                              callbacks: {
-                                 label: function(context) {
-                                     let label = context.dataset.label || '';
-                                     if (label) {
-                                         label += ': ';
-                                     }
-                                     if (context.parsed.y !== null) {
-                                         label += 'Rp ' + context.parsed.y.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                                     }
-                                     return label;
-                                 }
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += 'Rp ' + context.parsed.y.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                                    }
+                                    return label;
+                                }
                              }
-                         }
+                          }
                     },
                     scales: {
                         y: {
