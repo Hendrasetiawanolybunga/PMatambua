@@ -1,0 +1,222 @@
+{% extends "admin/index.html" %}
+{% load i18n static humanize %}
+{% load i18n static admin_list %}
+
+{% block extrahead %}
+    <!-- CDN Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <!-- CDN Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
+    <!-- MENGGUNAKAN json_script untuk mengirim data Python ke JS secara aman -->
+    {{ bulan_label|json_script:"bulan_label_data" }}
+    {{ pendapatan_bulanan|json_script:"pendapatan_bulanan_data" }}
+
+    <!-- PENTING: Custom CSS untuk memaksimalkan lebar konten -->
+    <style>
+        /* Memaksa div utama yang berisi card dan grafik untuk mengambil lebar 100% 
+           dan menimpa padding/margin yang mungkin membatasi dari tema Jazzmin. */
+        #content-main {
+            max-width: 100% !important; 
+            width: 100% !important;
+            /* Hilangkan padding kiri/kanan di content-main jika ada */
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        /* Pastikan elemen row di dalam content-main tidak memiliki margin negatif yang berlebihan */
+        #content-main .row {
+            margin-left: 0;
+            margin-right: 0;
+        }
+        
+        /* Tambahkan sedikit padding pada .page-header (judul) agar tidak terlalu mepet dengan sisi */
+        .page-header {
+            margin-left: 1rem;
+            margin-right: 1rem;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    
+    <!-- Div content-main. Kita coba menambahkan class container-fluid untuk memaksa lebar penuh -->
+    <div id="content-main" class="container-fluid">
+        <!-- BARIS 1: CARDS TOTAL DATA -->
+        <!-- Penggunaan col-lg-3 memastikan 4 card per baris -->
+        <div class="row">
+            
+            <!-- Card Total Pelanggan -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card shadow border-left-primary h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    Total Pelanggan
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    {{ total_pelanggan|intcomma }}
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-users fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Total Barang -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card shadow border-left-success h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    Total Barang
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    {{ total_barang|intcomma }}
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-box fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Total Penyewaan -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card shadow border-left-warning h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    Total Sewa (Sukses)
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    {{ total_penyewaan|intcomma }}
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Total Pendapatan -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card shadow border-left-info h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                    Total Pendapatan
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    Rp {{ total_pendapatan|floatformat:0|intcomma }}
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-wallet fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- BARIS 2: GRAFIK PENDAPATAN (Memakai col-md-12 untuk Lebar Penuh) -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card shadow-lg mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Grafik Pendapatan Bulanan (12 Bulan Terakhir)</h6>
+                    </div>
+                    <div class="card-body">
+                        <!-- Canvas ditampilkan TANPA KONDISI IF (Walaupun data kosong) -->
+                        <canvas id="pendapatanChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- KODE JAVASCRIPT UNTUK CHART.JS -->
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Ambil data dari script tag yang dibuat dengan json_script
+            const bulanLabels = JSON.parse(document.getElementById('bulan_label_data').textContent);
+            const pendapatanData = JSON.parse(document.getElementById('pendapatan_bulanan_data').textContent);
+
+            const ctx = document.getElementById('pendapatanChart').getContext('2d');
+            const chartData = {
+                labels: bulanLabels,
+                datasets: [{
+                    label: 'Total Pendapatan (Rp)',
+                    data: pendapatanData,
+                    backgroundColor: 'rgba(223, 182, 0, 1)',
+                    borderColor: 'rgba(143, 153, 1, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                }]
+            };
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                             callbacks: {
+                                 label: function(context) {
+                                     let label = context.dataset.label || '';
+                                     if (label) {
+                                         label += ': ';
+                                     }
+                                     if (context.parsed.y !== null) {
+                                         label += 'Rp ' + context.parsed.y.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                                     }
+                                     return label;
+                                 }
+                             }
+                         }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value, index, ticks) {
+                                    // Format mata uang Rupiah pada sumbu Y
+                                    if (value >= 1000000) {
+                                        return 'Rp ' + (value / 1000000).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + ' Juta';
+                                    } else if (value >= 1000) {
+                                        return 'Rp ' + (value / 1000).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + 'K'; 
+                                    }
+                                    return 'Rp ' + value.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+        </script>
+    </div>
+{% endblock %}
+
+{% block content_related %}
+    {# Menimpa block ini dengan kosong agar konten lama (Recent Actions) hilang #}
+{% endblock %}
+
+{% block sidebar %}
+    {# Menimpa block sidebar untuk menghilangkan app_list yang muncul setelah konten utama #}
+    {{ block.super }}
+{% endblock %}
