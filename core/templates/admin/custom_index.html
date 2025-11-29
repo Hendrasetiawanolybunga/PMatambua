@@ -150,64 +150,93 @@
         <!-- KODE JAVASCRIPT UNTUK CHART.JS -->
         <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Ambil data dari script tag yang dibuat dengan json_script
-            const bulanLabels = JSON.parse(document.getElementById('bulan_label_data').textContent);
-            const pendapatanData = JSON.parse(document.getElementById('pendapatan_bulanan_data').textContent);
+            try {
+                // Ambil data dari script tag yang dibuat dengan json_script
+                const bulanLabelsElement = document.getElementById('bulan_label_data');
+                const pendapatanDataElement = document.getElementById('pendapatan_bulanan_data');
+                
+                if (!bulanLabelsElement || !pendapatanDataElement) {
+                    console.error('Chart data elements not found');
+                    return;
+                }
+                
+                const bulanLabels = JSON.parse(bulanLabelsElement.textContent);
+                const pendapatanData = JSON.parse(pendapatanDataElement.textContent);
+                
+                // Debug logging to verify data
+                console.log('Bulan Labels:', bulanLabels);
+                console.log('Pendapatan Data:', pendapatanData);
+                
+                // Handle case where data might be empty or undefined
+                let processedPendapatanData = pendapatanData;
+                if (!Array.isArray(pendapatanData) || pendapatanData.length === 0) {
+                    console.warn('Pendapatan data is empty or invalid, using default zero values');
+                    processedPendapatanData = [0, 0, 0, 0, 0, 0];
+                }
+                
+                // Ensure all pendapatan data values are numbers
+                const numericPendapatanData = processedPendapatanData.map(value => {
+                    const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+                    return isNaN(num) ? 0 : num;
+                });
 
-            const ctx = document.getElementById('pendapatanChart').getContext('2d');
-            const chartData = {
-                labels: bulanLabels,
-                datasets: [{
-                    label: 'Total Pendapatan (Rp)',
-                    data: pendapatanData,
-                    backgroundColor: 'rgba(223, 182, 0, 1)',
-                    borderColor: 'rgba(143, 153, 1, 1)',
-                    borderWidth: 1,
-                    borderRadius: 5,
-                }]
-            };
+                const ctx = document.getElementById('pendapatanChart').getContext('2d');
+                const chartData = {
+                    labels: bulanLabels && Array.isArray(bulanLabels) ? bulanLabels : ['', '', '', '', '', ''],
+                    datasets: [{
+                        label: 'Total Pendapatan (Rp)',
+                        data: numericPendapatanData,
+                        backgroundColor: 'rgba(223, 182, 0, 1)',
+                        borderColor: 'rgba(143, 153, 1, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                    }]
+                };
 
-            new Chart(ctx, {
-                type: 'bar',
-                data: chartData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' },
-                        tooltip: {
-                             callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            label += 'Rp ' + context.parsed.y.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                                        }
+                                        return label;
                                     }
-                                    if (context.parsed.y !== null) {
-                                        label += 'Rp ' + context.parsed.y.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                                    }
-                                    return label;
                                 }
-                             }
-                          }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value, index, ticks) {
-                                    // Format mata uang Rupiah pada sumbu Y
-                                    if (value >= 1000000) {
-                                        return 'Rp ' + (value / 1000000).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + ' Juta';
-                                    } else if (value >= 1000) {
-                                        return 'Rp ' + (value / 1000).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + 'K'; 
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value, index, ticks) {
+                                        // Format mata uang Rupiah pada sumbu Y
+                                        if (value >= 1000000) {
+                                            return 'Rp ' + (value / 1000000).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + ' Juta';
+                                        } else if (value >= 1000) {
+                                            return 'Rp ' + (value / 1000).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + 'K'; 
+                                        }
+                                        return 'Rp ' + value.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                                     }
-                                    return 'Rp ' + value.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+            } catch (error) {
+                console.error('Error initializing chart:', error);
+            }
         });
         </script>
     </div>

@@ -55,76 +55,122 @@ def admin_dashboard_context(request):
     
     today = datetime.now()
     
-    # 2.1. Tentukan Tanggal Mulai (6 bulan yang lalu)
+    # 2.1. Tentukan Tanggal Mulai (6 bulan terakhir termasuk bulan ini)
     # Dapatkan bulan saat ini (hanya tahun dan bulan)
     current_month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     
-    # Mundur 6 bulan
-    six_months_ago = current_month_start
-    for _ in range(6):
+    # Mundur 5 bulan untuk mendapatkan awal periode (6 bulan termasuk bulan ini)
+    five_months_ago = current_month_start
+    for i in range(5):
         # Cari hari pertama bulan sebelumnya
-        six_months_ago = (six_months_ago - timedelta(days=1)).replace(day=1)
+        if five_months_ago.month == 1:
+            five_months_ago = five_months_ago.replace(year=five_months_ago.year - 1, month=12)
+        else:
+            five_months_ago = five_months_ago.replace(month=five_months_ago.month - 1)
+    
+    # print(f"Current month start: {current_month_start}")
+    # print(f"Five months ago (start of range): {five_months_ago}")
+    
+    # Gunakan five_months_ago sebagai awal periode
+    start_of_range = five_months_ago
         
     
     # 2.2. Ambil data aktual dari database
-    pendapatan_per_bulan_qs = penyewaan_sukses.filter(
-        tanggalPesan__gte=six_months_ago
-    ).annotate(
+    # print(f"Filtering rentals from date: {start_of_range}")
+    filtered_rentals = penyewaan_sukses.filter(tanggalPesan__gte=start_of_range)
+    # print(f"Found {filtered_rentals.count()} rentals in the date range")
+    
+    # Print some sample rental data for debugging
+    # sample_rentals = filtered_rentals[:5]
+    # for rental in sample_rentals:
+    #     print(f"Rental ID: {rental.idPenyewaan}, Date: {rental.tanggalPesan}, Status: {rental.statusSewa}, Total: {rental.totalBayar}")
+    
+    pendapatan_per_bulan_qs = filtered_rentals.annotate(
         month=TruncMonth('tanggalPesan')
     ).values('month').annotate(
         total=Sum('totalBayar')
     ).order_by('month')
     
-    # 🔥🔥🔥 PERBAIKAN UTAMA DI SINI 🔥🔥🔥
-    # Kita harus memastikan bahwa key dictionary adalah datetime.date, 
-    # dan menangani kasus di mana p['month'] mungkin sudah datetime.date 
-    # atau masih datetime.datetime.
+    # print(f"Aggregation query returned {pendapatan_per_bulan_qs.count()} grouped records")
+    # for item in pendapatan_per_bulan_qs:
+    #     print(f"  Month: {item['month']} (type: {type(item['month'])}), Total: {item['total']}")
     
-    from datetime import date # Impor date untuk cek tipe
-    
+    # Improved data processing to ensure correct data types
     pendapatan_dict = {}
     for p in pendapatan_per_bulan_qs:
         month_value = p['month']
+        total_value = p['total']
         
-        # Cek apakah itu datetime.datetime (perlu dikonversi) atau sudah datetime.date
+        # Convert month to date if it's datetime
         if isinstance(month_value, datetime):
             key = month_value.date()
-        elif isinstance(month_value, date):
-            # Ini adalah skenario error Anda: objek sudah date, jadi gunakan langsung
-            key = month_value
         else:
-            # Fallback (misalnya, jika data null atau tipe tak terduga)
-            continue 
-
-        pendapatan_dict[key] = float(p['total'])
+            key = month_value
+            
+        # print(f"Processing month_value: {month_value} (type: {type(month_value)}), converted key: {key} (type: {type(key)})")
+            
+        # Ensure total value is converted to float correctly
+        if total_value is not None:
+            pendapatan_dict[key] = float(total_value)
+        else:
+            pendapatan_dict[key] = 0.0
+            
+        # print(f"Aggregated data - Month: {key}, Revenue: {pendapatan_dict[key]}")
 
     
     # 2.3. Generate 6 bulan lengkap (dari 6 bulan lalu hingga bulan ini)
     bulan_label = []
     pendapatan_bulanan = []
     
-    # Mulai dari bulan ke-6 yang lalu (yang sudah kita hitung)
-    current_date = six_months_ago 
+    # Mulai dari bulan ke-5 yang lalu (awal periode)
+    current_date = start_of_range 
+    
+    # print(f"Generating data for 6 months starting from: {start_of_range}")
+    # print(f"Keys in pendapatan_dict: {list(pendapatan_dict.keys())}")
     
     # Kita iterasi sebanyak 6 bulan
-    for _ in range(6):
+    for i in range(6):
         
         # Format label: Singkatan Bulan Tahun (e.g., Jun 2025)
         label = current_date.strftime('%b %Y') 
         bulan_label.append(label)
         
-        # Key pencarian harus dalam format datetime.date, yang sudah kita pastikan di atas
+        # Key pencarian harus dalam format datetime.date
         data_key = current_date.date() 
         
-        pendapatan = pendapatan_dict.get(data_key, 0.0) 
+        # Debug the key matching
+        # print(f"Checking month {i+1}: {data_key} (looking for this key in dict)")
+        # print(f"Available keys: {list(pendapatan_dict.keys())}")
+        
+        # Try to find matching key (handle potential type mismatches)
+        pendapatan = 0.0
+        for dict_key, dict_value in pendapatan_dict.items():
+            # Compare dates regardless of whether they're date or datetime objects
+            if hasattr(dict_key, 'date') and dict_key.date() == data_key:
+                pendapatan = dict_value
+                break
+            elif dict_key == data_key:
+                pendapatan = dict_value
+                break
+                
+        # print(f"  Found revenue: {pendapatan}")
         pendapatan_bulanan.append(pendapatan)
         
-        # Maju ke bulan berikutnya
+        # Maju ke bulan berikutnya dengan cara yang lebih robust
         if current_date.month == 12:
             current_date = current_date.replace(year=current_date.year + 1, month=1)
         else:
             current_date = current_date.replace(month=current_date.month + 1)
             
+    # Ensure we always have 6 data points, even if no data exists
+    if len(pendapatan_bulanan) == 0:
+        pendapatan_bulanan = [0.0] * 6
+            
+    
+    # Debug print for troubleshooting
+    # print(f"Dashboard data - Total rentals: {total_penyewaan}, Total revenue: {total_pendapatan}")
+    # print(f"Monthly labels: {bulan_label}")
+    # print(f"Monthly revenue: {pendapatan_bulanan}")
     
     context = {
         'total_pelanggan': total_pelanggan,
