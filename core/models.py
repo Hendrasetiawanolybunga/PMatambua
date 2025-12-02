@@ -1,7 +1,9 @@
 from django.db import models
 from django.db.models import F
+from django.contrib.auth.models import User
 
 class Pelanggan(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     idPelanggan = models.AutoField(primary_key=True)
     namaPelanggan = models.CharField(max_length=50)
     noHp = models.CharField(max_length=15)

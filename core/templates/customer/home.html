@@ -1,0 +1,183 @@
+{% extends 'customer/base.html' %}
+{% load static %}
+
+{% load humanize %}
+{% block content %}
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-light py-3">
+            <h2 class="text-center mb-0 fw-bold text-navy" id="produk">Produk Kami</h2>
+        </div>
+        <div class="card-body">
+            {% if barang_list %}
+                <div id="productCarousel" class="carousel slide" data-bs-ride="carousel">
+                    <div class="carousel-indicators">
+                        <button type="button" data-bs-target="#productCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                        {% if barang_list|length > 3 %}
+                            <button type="button" data-bs-target="#productCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                        {% endif %}
+                        {% if barang_list|length > 6 %}
+                            <button type="button" data-bs-target="#productCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="carousel-inner">
+                        <!-- Slide 1 -->
+                        <div class="carousel-item active">
+                            <div class="row justify-content-center">
+                                <div class="col-md-10">
+                                    <div class="row">
+                                        {% for barang in barang_list|slice:":3" %}
+                                            <div class="col-md-4 col-sm-6 mb-4">
+                                                <div class="card h-100 border-0 shadow-sm">
+                                                    {% if barang.foto %}
+                                                        <img src="{{ barang.foto.url }}" class="card-img-top" 
+                                                            alt="{{ barang.namaBarang }}" style="height: 200px; object-fit: cover;">
+                                                    {% else %}
+                                                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                                                            style="height: 200px;">
+                                                            <i class="fas fa-image fa-3x text-muted"></i>
+                                                        </div>
+                                                    {% endif %}
+                                                    <div class="card-body d-flex flex-column">
+                                                        <h5 class="card-title fw-bold fs-6">{{ barang.namaBarang }}</h5>
+                                                        <p class="card-text small">
+                                                            <strong>Harga:</strong> Rp {{ barang.harga|intcomma }}<br>
+                                                            <strong>Stok:</strong> {{ barang.stok }}
+                                                        </p>
+                                                        <div class="mt-auto d-flex justify-content-between">
+                                                            <form method="post" action="{% url 'add_to_cart' barang.idBarang %}" class="me-1">
+                                                                {% csrf_token %}
+                                                                <input type="hidden" name="quantity" value="1">
+                                                                <button class="btn btn-sm btn-yellow" type="submit" title="Tambah ke Keranjang">
+                                                                    <i class="fas fa-cart-plus"></i>
+                                                                </button>
+                                                            </form>
+                                                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" 
+                                                                    data-bs-target="#productModal{{ barang.idBarang }}" title="Detail Produk">
+                                                                <i class="fas fa-info-circle"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        
+                        <!-- Slide 2 (if more than 3 items) -->
+                        {% if barang_list|length > 3 %}
+                            <div class="carousel-item">
+                                <div class="row justify-content-center">
+                                    <div class="col-md-10">
+                                        <div class="row">
+                                            {% for barang in barang_list|slice:"3:6" %}
+                                                <div class="col-md-4 col-sm-6 mb-4">
+                                                    <div class="card h-100 border-0 shadow-sm">
+                                                        {% if barang.foto %}
+                                                            <img src="{{ barang.foto.url }}" class="card-img-top" 
+                                                                alt="{{ barang.namaBarang }}" style="height: 200px; object-fit: cover;">
+                                                        {% else %}
+                                                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                                                                style="height: 200px;">
+                                                                <i class="fas fa-image fa-3x text-muted"></i>
+                                                            </div>
+                                                        {% endif %}
+                                                        <div class="card-body d-flex flex-column">
+                                                            <h5 class="card-title fw-bold fs-6">{{ barang.namaBarang }}</h5>
+                                                            <p class="card-text small">
+                                                                <strong>Harga:</strong> Rp {{ barang.harga|intcomma }}<br>
+                                                                <strong>Stok:</strong> {{ barang.stok }}
+                                                            </p>
+                                                            <div class="mt-auto d-flex justify-content-between">
+                                                                <form method="post" action="{% url 'add_to_cart' barang.idBarang %}" class="me-1">
+                                                                    {% csrf_token %}
+                                                                    <input type="hidden" name="quantity" value="1">
+                                                                    <button class="btn btn-sm btn-yellow" type="submit" title="Tambah ke Keranjang">
+                                                                        <i class="fas fa-cart-plus"></i>
+                                                                    </button>
+                                                                </form>
+                                                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" 
+                                                                        data-bs-target="#productModal{{ barang.idBarang }}" title="Detail Produk">
+                                                                    <i class="fas fa-info-circle"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Slide 3 (if more than 6 items) -->
+                        {% if barang_list|length > 6 %}
+                            <div class="carousel-item">
+                                <div class="row justify-content-center">
+                                    <div class="col-md-10">
+                                        <div class="row">
+                                            {% for barang in barang_list|slice:"6:9" %}
+                                                <div class="col-md-4 col-sm-6 mb-4">
+                                                    <div class="card h-100 border-0 shadow-sm">
+                                                        {% if barang.foto %}
+                                                            <img src="{{ barang.foto.url }}" class="card-img-top" 
+                                                                alt="{{ barang.namaBarang }}" style="height: 200px; object-fit: cover;">
+                                                        {% else %}
+                                                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                                                                style="height: 200px;">
+                                                                <i class="fas fa-image fa-3x text-muted"></i>
+                                                            </div>
+                                                        {% endif %}
+                                                        <div class="card-body d-flex flex-column">
+                                                            <h5 class="card-title fw-bold fs-6">{{ barang.namaBarang }}</h5>
+                                                            <p class="card-text small">
+                                                                <strong>Harga:</strong> Rp {{ barang.harga|intcomma }}<br>
+                                                                <strong>Stok:</strong> {{ barang.stok }}
+                                                            </p>
+                                                            <div class="mt-auto d-flex justify-content-between">
+                                                                <form method="post" action="{% url 'add_to_cart' barang.idBarang %}" class="me-1">
+                                                                    {% csrf_token %}
+                                                                    <input type="hidden" name="quantity" value="1">
+                                                                    <button class="btn btn-sm btn-yellow" type="submit" title="Tambah ke Keranjang">
+                                                                        <i class="fas fa-cart-plus"></i>
+                                                                    </button>
+                                                                </form>
+                                                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" 
+                                                                        data-bs-target="#productModal{{ barang.idBarang }}" title="Detail Produk">
+                                                                    <i class="fas fa-info-circle"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Previous</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Next</span>
+                    </button>
+                </div>
+            {% else %}
+                <div class="alert alert-info text-center">
+                    <h4><i class="fas fa-info-circle me-2"></i>Tidak ada produk tersedia</h4>
+                    <p>Mohon maaf, saat ini belum ada produk yang tersedia. Silakan periksa kembali nanti.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

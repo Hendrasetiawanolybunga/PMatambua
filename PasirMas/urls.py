@@ -8,7 +8,9 @@ from django.views.generic import RedirectView
 # Import instance custom_admin_site dari core.admin
 from core.admin import custom_admin_site 
 # Import URL laporan
-from core.urls import report_urls 
+from core.urls import report_urls
+# Import customer URLs
+from core.customer_urls import urlpatterns as customer_urls 
 
 urlpatterns = [
     # ----------------------------------------------------------------------
@@ -26,8 +28,8 @@ urlpatterns = [
     # ----------------------------------------------------------------------
     path('admin/', custom_admin_site.urls), 
     
-    # Contoh: Redirect dari root ke admin
-    path('', RedirectView.as_view(url='admin/', permanent=True)),
+    # Customer URLs
+    path('', include(customer_urls)),
 ]
 
 # Menambahkan URL untuk file media dan statis hanya saat mode DEBUG aktif
