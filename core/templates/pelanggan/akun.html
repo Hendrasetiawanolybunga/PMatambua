@@ -1,0 +1,173 @@
+{% extends 'pelanggan/base.html' %}
+{% load humanize %}
+
+{% block title %}Akun Saya{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10 col-12">
+        <div class="card shadow border-0 rounded-15">
+            <div class="card-header bg-light py-4 rounded-top-15">
+                <h3 class="mb-0 text-center fw-bold text-navy">Profil Akun</h3>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <!-- Profile Image Column -->
+                    <div class="col-md-3 text-center mb-4 mb-md-0">
+                        <div class="position-relative d-inline-block">
+                            <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto" 
+                                 style="width: 140px; height: 140px;">
+                                <i class="fas fa-user fa-4x text-muted"></i>
+                            </div>
+                            <span class="badge bg-yellow position-absolute top-0 start-100 translate-middle rounded-pill">
+                                <i class="fas fa-check"></i> Pelanggan
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Profile Details Column -->
+                    <div class="col-md-9">
+                        <div class="profile-details bg-fade p-4 rounded-10">
+                            <h4 class="mb-3 fw-bold text-navy">{{ pelanggan.namaPelanggan }}</h4>
+                            
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-box bg-yellow-light rounded-circle p-2 me-3">
+                                            <i class="fas fa-phone text-yellow"></i>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted">Nomor Telepon</small>
+                                            <p class="mb-0 fw-medium">{{ pelanggan.noHp }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                               
+                                
+                                <div class="col-12">
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-box bg-yellow-light rounded-circle p-2 me-3">
+                                            <i class="fas fa-id-badge text-yellow"></i>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted">ID Pelanggan</small>
+                                            <p class="mb-0 fw-medium">#{{ pelanggan.idPelanggan|stringformat:"06d" }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                <!-- Action Buttons -->
+                <div class="row">
+                    <div class="col-12">
+                        <h5 class="mb-4 fw-bold text-navy">Aksi Profil</h5>
+                        <div class="d-grid gap-3 d-md-flex justify-content-md-start">
+                            <a href="{% url 'rental_history' %}" class="btn btn-yellow btn-lg px-4 py-3">
+                                <i class="fas fa-history fa-lg me-2"></i>
+                                <div class="text-start">
+                                    <small class="d-block">Riwayat</small>
+                                    <strong>Penyewaan</strong>
+                                </div>
+                            </a>
+                            <a href="{% url 'katalog_barang' %}" class="btn btn-outline-yellow btn-lg px-4 py-3">
+                                <i class="fas fa-shopping-bag fa-lg me-2"></i>
+                                <div class="text-start">
+                                    <small class="d-block">Sewa</small>
+                                    <strong>Barang Baru</strong>
+                                </div>
+                            </a>
+                            <a href="{% url 'logout_pelanggan' %}" class="btn btn-outline-danger btn-lg px-4 py-3">
+                                <i class="fas fa-sign-out-alt fa-lg me-2"></i>
+                                <div class="text-start">
+                                    <small class="d-block">Keluar</small>
+                                    <strong>Akun</strong>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .rounded-15 {
+        border-radius: 15px !important;
+    }
+    
+    .rounded-10 {
+        border-radius: 10px !important;
+    }
+    
+    .rounded-top-15 {
+        border-top-left-radius: 15px !important;
+        border-top-right-radius: 15px !important;
+    }
+    
+    .bg-fade {
+        background-color: rgba(255, 215, 0, 0.1);
+    }
+    
+    .bg-yellow-light {
+        background-color: rgba(255, 215, 0, 0.2);
+    }
+    
+    .text-navy {
+        color: #1c2833 !important;
+    }
+    
+    .icon-box {
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .btn-yellow {
+        background-color: #FFD700;
+        border-color: #FFD700;
+        color: #000;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-yellow:hover {
+        background-color: #e6c200;
+        border-color: #e6c200;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-outline-yellow {
+        border-color: #FFD700;
+        color: #FFD700;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-outline-yellow:hover {
+        background-color: #FFD700;
+        color: #000;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-lg {
+        border-radius: 10px;
+    }
+    
+    .badge.bg-yellow {
+        background-color: #FFD700 !important;
+        color: #000 !important;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}

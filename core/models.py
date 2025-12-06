@@ -1,12 +1,14 @@
 from django.db import models
 from django.db.models import F
-from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password, check_password
+from datetime import timedelta
 
 class Pelanggan(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     idPelanggan = models.AutoField(primary_key=True)
     namaPelanggan = models.CharField(max_length=50)
-    noHp = models.CharField(max_length=15)
+    noHp = models.CharField(max_length=15, unique=True)  # Digunakan sebagai username
+    password = models.CharField(max_length=128)  # Untuk menyimpan hash password
+    last_login = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         verbose_name = "Pelanggan"
@@ -14,6 +16,16 @@ class Pelanggan(models.Model):
     
     def __str__(self):
         return self.namaPelanggan
+    
+    @property
+    def is_authenticated(self):
+        return True
+    
+    def set_password(self, raw_password):
+        self.password = make_password(raw_password)
+    
+    def check_password(self, raw_password):
+        return check_password(raw_password, self.password)
     
 
 class Barang(models.Model):
@@ -57,6 +69,11 @@ class Penyewaan(models.Model):
     def __str__(self):
         return f'Sewa {self.idPenyewaan} oleh {self.idPelanggan.namaPelanggan}'
     
+    @property
+    def tanggalPembongkaranTerhitung(self):
+        """Calculate the actual tanggal pembongkaran (H + durasi + 1)"""
+        return self.tanggalAcara + timedelta(days=self.durasiSewa + 1)
+
 class DetailSewa(models.Model):
     idDetailSewa = models.AutoField(primary_key=True)
     idPenyewaan = models.ForeignKey(Penyewaan, on_delete=models.CASCADE)

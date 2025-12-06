@@ -1,0 +1,191 @@
+{% extends 'pelanggan/base.html' %}
+{% load humanize %}
+
+{% block title %}Checkout - Pasir Mas{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4 fw-bold text-navy">Checkout</h1>
+    </div>
+</div>
+
+{% if cart_items %}
+    <div class="row">
+        <!-- Ringkasan Keranjang -->
+        <div class="col-lg-8 col-12">
+            <div class="card mb-4 shadow">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0 fw-bold text-navy">Ringkasan Keranjang</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Produk</th>
+                                    <th class="text-end">Harga</th>
+                                    <th class="text-center">Jumlah</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cart_items %}
+                                    <tr>
+                                        <td>{{ item.barang.namaBarang }}</td>
+                                        <td class="text-end">Rp {{ item.barang.harga|intcomma }}</td>
+                                        <td class="text-center">{{ item.quantity }}</td>
+                                        <td class="text-end">Rp {{ item.subtotal|intcomma }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th colspan="3" class="text-end">Total Estimasi:</th>
+                                    <th class="text-end text-yellow fw-bold">Rp {{ total_amount|intcomma }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulir Pelanggan & Sewa -->
+            <div class="card shadow">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0 fw-bold text-navy">Informasi Pelanggan & Sewa</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'process_checkout' %}">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6 col-12 mb-3">
+                                <label class="form-label fw-bold">Nama Lengkap</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    <input type="text" class="form-control" value="{{ pelanggan.namaPelanggan }}" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12 mb-3">
+                                <label class="form-label fw-bold">Nomor HP</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                    <input type="tel" class="form-control" value="{{ pelanggan.noHp }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="alamatPemasangan" class="form-label fw-bold">Alamat Pemasangan <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                                <textarea class="form-control" id="alamatPemasangan" name="alamatPemasangan" rows="3" required></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 col-12 mb-3">
+                                <label for="tanggalAcara" class="form-label fw-bold">Tanggal Acara <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-calendar-day"></i></span>
+                                    <input type="date" class="form-control" id="tanggalAcara" name="tanggalAcara" required min="{{ today }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12 mb-3">
+                                <label for="durasiSewa" class="form-label fw-bold">Durasi Sewa (hari) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                                    <input type="number" class="form-control" id="durasiSewa" name="durasiSewa" min="1" value="1" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{% url 'view_cart' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-arrow-left me-1"></i> Kembali ke Keranjang
+                            </a>
+                            <button type="submit" class="btn btn-yellow btn-lg">
+                                <i class="fas fa-check-circle me-1"></i> Selesaikan Pemesanan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informasi Tambahan -->
+        <div class="col-lg-4 col-12">
+            <div class="card shadow">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0 fw-bold text-navy">Informasi</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0 text-success">
+                                    <i class="fas fa-check-circle fa-lg"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    Pembayaran dilakukan saat pengambilan barang
+                                </div>
+                            </div>
+                        </li>
+                        <li class="mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0 text-success">
+                                    <i class="fas fa-check-circle fa-lg"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    Harap datang 1 jam sebelum acara dimulai
+                                </div>
+                            </div>
+                        </li>
+                        <li class="mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0 text-success">
+                                    <i class="fas fa-check-circle fa-lg"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    Pengembalian barang maksimal H+1 setelah acara
+                                </div>
+                            </div>
+                        </li>
+                        <li class="mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0 text-warning">
+                                    <i class="fas fa-exclamation-circle fa-lg"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    Keterlambatan pengembalian dikenakan biaya tambahan
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="card shadow">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+            <h4 class="fw-bold text-navy">Keranjang Anda Kosong</h4>
+            <p class="mb-4">Silakan tambahkan produk ke keranjang sebelum melakukan checkout.</p>
+            <a href="{% url 'katalog_barang' %}" class="btn btn-yellow btn-lg">
+                <i class="fas fa-shopping-bag me-2"></i>Lihat Produk
+            </a>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Set minimum date to today
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('tanggalAcara').min = today;
+    });
+</script>
+{% endblock %}

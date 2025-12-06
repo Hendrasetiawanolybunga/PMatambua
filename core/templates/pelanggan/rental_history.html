@@ -1,0 +1,83 @@
+{% extends 'pelanggan/base.html' %}
+{% load humanize %}
+
+{% block title %}Riwayat Sewa - Pasir Mas{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4 fw-bold text-navy">Riwayat Sewa</h1>
+    </div>
+</div>
+
+{% if penyewaan_list %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0 fw-bold text-navy">Daftar Sewa Anda</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID Sewa</th>
+                                    <th>Tanggal Pesan</th>
+                                    <th>Tanggal Acara</th>
+                                    <th>Tanggal Pembongkaran</th>
+                                    <th>Status</th>
+                                    <th>Total Bayar</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for penyewaan in penyewaan_list %}
+                                    <tr>
+                                        <td>{{ penyewaan.idPenyewaan }}</td>
+                                        <td>{{ penyewaan.tanggalPesan|date:"d M Y" }}</td>
+                                        <td>{{ penyewaan.tanggalAcara|date:"d M Y" }}</td>
+                                        <td>{{ penyewaan.tanggalPembongkaranTerhitung|date:"d M Y" }}</td>
+                                        <td>
+                                            {% if penyewaan.statusSewa == 'Pending' %}
+                                                <span class="badge bg-warning">Menunggu Konfirmasi</span>
+                                            {% elif penyewaan.statusSewa == 'Confirmed' %}
+                                                <span class="badge bg-info">Dikonfirmasi</span>
+                                            {% elif penyewaan.statusSewa == 'Completed' %}
+                                                <span class="badge bg-success">Selesai</span>
+                                            {% elif penyewaan.statusSewa == 'Cancelled' %}
+                                                <span class="badge bg-danger">Dibatalkan</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if penyewaan.totalBayar %}
+                                                Rp {{ penyewaan.totalBayar|intcomma }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'rental_detail' penyewaan.idPenyewaan %}" class="btn btn-sm btn-outline-yellow">Detail</a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="card shadow">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-history fa-3x text-muted mb-3"></i>
+            <h4 class="fw-bold text-navy">Belum Ada Riwayat Sewa</h4>
+            <p class="mb-4">Anda belum pernah melakukan penyewaan. Silakan sewa barang terlebih dahulu.</p>
+            <a href="{% url 'katalog_barang' %}" class="btn btn-yellow btn-lg">
+                <i class="fas fa-shopping-bag me-2"></i>Sewa Barang Sekarang
+            </a>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
