@@ -6,58 +6,24 @@
 {% block content %}
 <div class="container py-4">
     <!-- Hero Section -->
-    <div id="heroCarousel" class="carousel slide mb-5" data-bs-ride="carousel">
-        <div class="carousel-indicators">
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active"></button>
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1"></button>
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2"></button>
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="3"></button>
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="4"></button>
-        </div>
-        <div class="carousel-inner rounded-3 shadow">
-            <div class="carousel-item active">
-                <img src="{% static 'img/hero/1.jpeg' %}" class="d-block w-100" alt="Hero Image 1" style="height: 500px; object-fit: cover;">
-                <div class="carousel-caption d-none d-md-block" style="background: rgba(0, 0, 0, 0.6); padding: 20px; border-radius: 10px;">
-                    <h2>Selamat Datang di Pasir Mas</h2>
-                    <p class="lead">Sewa alat pesta terbaik di kota Anda</p>
-                </div>
-            </div>
-            <div class="carousel-item">
-                <img src="{% static 'img/hero/2.jpeg' %}" class="d-block w-100" alt="Hero Image 2" style="height: 500px; object-fit: cover;">
-                <div class="carousel-caption d-none d-md-block" style="background: rgba(0, 0, 0, 0.6); padding: 20px; border-radius: 10px;">
-                    <h2>Kualitas Terjamin</h2>
-                    <p class="lead">Alat-alat kami selalu dalam kondisi terbaik</p>
-                </div>
-            </div>
-            <div class="carousel-item">
-                <img src="{% static 'img/hero/3.jpeg' %}" class="d-block w-100" alt="Hero Image 3" style="height: 500px; object-fit: cover;">
-                <div class="carousel-caption d-none d-md-block" style="background: rgba(0, 0, 0, 0.6); padding: 20px; border-radius: 10px;">
-                    <h2>Harga Terjangkau</h2>
-                    <p class="lead">Penawaran terbaik untuk setiap acara Anda</p>
-                </div>
-            </div>
-            <div class="carousel-item">
-                <img src="{% static 'img/hero/4.jpeg' %}" class="d-block w-100" alt="Hero Image 4" style="height: 500px; object-fit: cover;">
-                <div class="carousel-caption d-none d-md-block" style="background: rgba(0, 0, 0, 0.6); padding: 20px; border-radius: 10px;">
-                    <h2>Layanan Profesional</h2>
-                    <p class="lead">Tim kami siap membantu acara Anda</p>
-                </div>
-            </div>
-            <div class="carousel-item">
-                <img src="{% static 'img/hero/5.jpeg' %}" class="d-block w-100" alt="Hero Image 5" style="height: 500px; object-fit: cover;">
-                <div class="carousel-caption d-none d-md-block" style="background: rgba(0, 0, 0, 0.6); padding: 20px; border-radius: 10px;">
-                    <h2>Pengiriman Cepat</h2>
-                    <p class="lead">Gratis pengiriman untuk area tertentu</p>
+    <section class="mb-5 py-5 text-white rounded-3 shadow" style="background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('{% static 'img/hero/1.jpeg' %}'); background-size: cover; background-position: center;">
+        <div class="container py-5">
+            <div class="row">
+                <div class="col-lg-8 mx-auto text-center">
+                    <h1 class="display-4 fw-bold mb-3">Selamat Datang di Pasir Mas</h1>
+                    <p class="lead mb-4">Sewa alat pesta terbaik di kota Anda dengan harga terjangkau dan layanan profesional</p>
+                    <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+                        <a href="{% url 'katalog_barang' %}" class="btn btn-yellow btn-lg px-4 me-sm-3">
+                            <i class="fas fa-shopping-bag me-2"></i>Lihat Katalog
+                        </a>
+                        <a href="{% url 'katalog_barang' %}" class="btn btn-outline-light btn-lg px-4">
+                            <i class="fas fa-cart-plus me-2"></i>Pesan Sekarang
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
-        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon"></span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon"></span>
-        </button>
-    </div>
+    </section>
 
     <!-- About Section -->
     <section class="mb-5 py-5 fade-in">
@@ -76,6 +42,7 @@
                     <li>Layanan pengiriman tepat waktu</li>
                     <li>Tim support yang ramah dan profesional</li>
                 </ul>
+                <p><strong>1. Pasir Mas melayani pemesanan perlengkapan acara untuk wilayah Atambua, Malaka, Kefa, hingga Timor Leste, dengan sistem harga yang menyesuaikan lokasi pemesanan. Untuk tenda ukuran 6x6 meter, harga berlaku Rp250.000 di Atambua, Rp300.000 di wilayah Malaka dan Kefa, serta 35$ setara dengan 560.000 untuk pemesanan di Timor Leste. Sementara itu, tenda ukuran 6x4 meter dikenakan tarif Rp225.000 untuk wilayah Atambua dan Rp300.000 untuk pemesanan di luar Atambua. Silahkan pilih wilayah Anda untuk melihat harga yang sesuai sebelum melakukan pemesanan.</strong></p>
             </div>
         </div>
     </section>
@@ -126,8 +93,8 @@
                     <div class="card-body">
                         <i class="fas fa-phone fa-2x text-yellow mb-3"></i>
                         <h5>Telepon</h5>
-                        <p class="mb-0"><a href="https://wa.me/6281234567890" class="text-decoration-none">+62 812 3456 7890</a></p>
-                        <p class="text-muted">Senin - Minggu, 08:00 - 20:00 WIB</p>
+                        <p class="mb-0"><a href="https://wa.me/6281247452359" class="text-decoration-none">081247452359</a></p>
+                        <p class="text-muted">Senin – Minggu, setiap waktu</p>
                     </div>
                 </div>
             </div>
@@ -136,8 +103,8 @@
                     <div class="card-body">
                         <i class="fas fa-map-marker-alt fa-2x text-yellow mb-3"></i>
                         <h5>Alamat</h5>
-                        <p class="mb-0">Jl. Contoh No. 123</p>
-                        <p class="text-muted">Kota Contoh, Provinsi Contoh 12345</p>
+                        <p class="mb-0">Sesekoe, Jalan Martadinatha</p>
+                        <p class="text-muted">Kota Atambua, Kecamatan Atambua Barat, Provinsi NTT</p>
                     </div>
                 </div>
             </div>
@@ -147,10 +114,7 @@
                         <i class="fas fa-hashtag fa-2x text-yellow mb-3"></i>
                         <h5>Social Media</h5>
                         <p class="mb-0">
-                            <a href="#" class="text-decoration-none me-2"><i class="fab fa-instagram"></i> Instagram</a>
-                        </p>
-                        <p class="mb-0">
-                            <a href="#" class="text-decoration-none"><i class="fab fa-facebook"></i> Facebook</a>
+                            <a href="https://www.instagram.com/pasir_masatambua?igsh=MWU4aTVqOTRoMDRsYQ==" class="text-decoration-none me-2"><i class="fab fa-instagram"></i> Instagram</a>
                         </p>
                     </div>
                 </div>
@@ -160,11 +124,25 @@
 </div>
 
 <style>
+    .btn-yellow {
+        background-color: #FFD700;
+        border-color: #FFD700;
+        color: #000;
+        font-weight: 600;
+    }
+    
+    .btn-yellow:hover {
+        background-color: #e6c200;
+        border-color: #e6c200;
+        color: #000;
+    }
+    
     @media (max-width: 768px) {
-        .carousel-caption h2 {
-            font-size: 1.5rem;
+        .display-4 {
+            font-size: 2rem;
         }
-        .carousel-caption p {
+        
+        .lead {
             font-size: 1rem;
         }
     }

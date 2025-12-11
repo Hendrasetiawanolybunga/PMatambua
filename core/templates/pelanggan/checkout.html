@@ -24,9 +24,9 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Produk</th>
-                                    <th class="text-end">Harga</th>
+                                    <th class="text-end">Harga/Hari</th>
                                     <th class="text-center">Jumlah</th>
-                                    <th class="text-end">Subtotal</th>
+                                    <th class="text-end">Subtotal/Hari</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -41,8 +41,16 @@
                             </tbody>
                             <tfoot class="table-light">
                                 <tr>
-                                    <th colspan="3" class="text-end">Total Estimasi:</th>
-                                    <th class="text-end text-yellow fw-bold">Rp {{ total_amount|intcomma }}</th>
+                                    <th colspan="3" class="text-end">Total/Hari:</th>
+                                    <th class="text-end text-yellow fw-bold">Rp {{ total_daily_amount|intcomma }}</th>
+                                </tr>
+                                <tr>
+                                    <th colspan="3" class="text-end">Durasi Sewa:</th>
+                                    <th class="text-end text-yellow fw-bold"><span id="durasi-value">1</span> hari</th>
+                                </tr>
+                                <tr>
+                                    <th colspan="3" class="text-end">Total Biaya:</th>
+                                    <th class="text-end text-yellow fw-bold">Rp <span id="total-biaya">{{ total_daily_amount|intcomma }}</span></th>
                                 </tr>
                             </tfoot>
                         </table>
@@ -186,6 +194,22 @@
     document.addEventListener('DOMContentLoaded', function() {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('tanggalAcara').min = today;
+        
+        // Get daily total from template
+        const dailyTotal = {{ total_daily_amount }};
+        
+        // Get durasi input and add event listener
+        const durasiInput = document.getElementById('durasiSewa');
+        const durasiValue = document.getElementById('durasi-value');
+        const totalBiaya = document.getElementById('total-biaya');
+        
+        durasiInput.addEventListener('input', function() {
+            const durasi = parseInt(this.value) || 1;
+            const total = dailyTotal * durasi;
+            
+            durasiValue.textContent = durasi;
+            totalBiaya.textContent = total.toLocaleString('id-ID');
+        });
     });
 </script>
 {% endblock %}

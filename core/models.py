@@ -69,6 +69,22 @@ class Penyewaan(models.Model):
     def __str__(self):
         return f'Sewa {self.idPenyewaan} oleh {self.idPelanggan.namaPelanggan}'
     
+    def save(self, *args, **kwargs):
+        # Simpan status lama jika ini adalah update
+        if self.pk:
+            old_status = Penyewaan.objects.get(pk=self.pk).statusSewa
+        else:
+            old_status = None
+            
+        super().save(*args, **kwargs)
+        
+        # Jika status berubah menjadi 'Completed', kembalikan stok barang
+        if old_status != 'Completed' and self.statusSewa == 'Completed':
+            # Iterasi melalui semua DetailSewa yang terhubung dengan Penyewaan ini
+            for detail in self.detailsewa_set.all():
+                # Kembalikan jumlahBarang yang disewa ke Barang.stok
+                Barang.objects.filter(pk=detail.idBarang.pk).update(stok=F('stok') + detail.jumlahBarang)
+    
     @property
     def tanggalPembongkaranTerhitung(self):
         """Calculate the actual tanggal pembongkaran (H + durasi + 1)"""
@@ -84,6 +100,7 @@ class DetailSewa(models.Model):
         ('Rusak', 'Rusak'),
         ('Hilang', 'Hilang'),
     ], default='Baik')
+    jumlahBermasalah = models.PositiveIntegerField(default=0, verbose_name="Jumlah Rusak/Hilang")
     # Null=True dan blank=True agar bisa dihitung otomatis di Admin
     subTotal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     

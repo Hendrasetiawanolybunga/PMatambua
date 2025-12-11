@@ -12,7 +12,7 @@
 
 {% if cart_items %}
     <div class="row">
-        <div class="col-12">
+        <div class="col-lg-8 col-12">
             <div class="card shadow-sm">
                 <div class="card-header bg-light py-3">
                     <h5 class="mb-0 fw-bold text-navy">Item dalam Keranjang</h5>
@@ -23,9 +23,9 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Produk</th>
-                                    <th class="text-end">Harga</th>
+                                    <th class="text-end">Harga/Hari</th>
                                     <th class="text-center">Jumlah</th>
-                                    <th class="text-end">Subtotal</th>
+                                    <th class="text-end">Subtotal/Hari</th>
                                     <th class="text-center">Aksi</th>
                                 </tr>
                             </thead>
@@ -43,7 +43,10 @@
                                                         <i class="fas fa-minus"></i>
                                                     </button>
                                                 </form>
-                                                <span class="mx-2">{{ item.quantity }}</span>
+                                                <form method="post" action="{% url 'update_cart' item.barang.idBarang %}" class="mx-2" id="quantity-form-{{ item.barang.idBarang }}">
+                                                    {% csrf_token %}
+                                                    <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.barang.stok }}" class="form-control form-control-sm text-center" style="width: 60px; display: inline-block;" onchange="this.form.submit()">
+                                                </form>
                                                 <form method="post" action="{% url 'update_cart' item.barang.idBarang %}" class="ms-1">
                                                     {% csrf_token %}
                                                     <input type="hidden" name="action" value="increase">
@@ -67,15 +70,36 @@
                             </tbody>
                             <tfoot class="table-light">
                                 <tr>
-                                    <th colspan="3" class="text-end">Total:</th>
+                                    <th colspan="3" class="text-end">Total/Hari:</th>
                                     <th class="text-end text-yellow fw-bold">Rp {{ total_amount|intcomma }}</th>
                                     <th></th>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
-                    
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4 col-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0 fw-bold text-navy">Informasi</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>DIBAGIAN INFORMASI :</strong></p>
+                    <ul class="mb-0">
+                        <li>Pembayaran dilakukan setelah pembongkaran.</li>
+                        <li>Tolong menjaga barang barang yang di sewa.</li>
+                        <li>Barang yang hilang dan rusak di Ganti oleh penyewa (bisa berupa uang atau barang tersebut).</li>
+                        <li>Berikan Alamat yang jelas Atau bisa kirim Lokasi di nomor whastaap kami (081247452359).</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-grid gap-2">
                         <a href="{% url 'katalog_barang' %}" class="btn btn-secondary btn-lg">
                             <i class="fas fa-arrow-left me-1"></i> Lanjutkan Belanja
                         </a>

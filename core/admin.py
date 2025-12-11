@@ -7,6 +7,7 @@ from .models import Pelanggan, Barang, Penyewaan, DetailSewa
 from django.contrib.auth.models import Group, User # Penting: Import User
 from django.contrib.admin.sites import NotRegistered 
 from django.urls import reverse # Diperlukan untuk membuat URL link laporan
+from django.contrib.humanize.templatetags.humanize import intcomma
 
 # Asumsi: Anda memiliki file views.py dengan fungsi admin_dashboard_context
 try:
@@ -134,9 +135,14 @@ class PelangganAdmin(admin.ModelAdmin):
 # --- Admin Class untuk Barang ---
 @admin.register(Barang, site=custom_admin_site)
 class BarangAdmin(admin.ModelAdmin):
-    list_display = ('idBarang', 'namaBarang', 'harga', 'stok', 'ukuran', 'foto_preview', 'aksi_link')
+    list_display = ('idBarang', 'namaBarang', 'harga_formatted', 'stok', 'ukuran', 'foto_preview', 'aksi_link')
     search_fields = ('namaBarang',)
     list_filter = ('ukuran',)
+    
+    def harga_formatted(self, obj):
+        return f"Rp {intcomma(obj.harga)}"
+    harga_formatted.short_description = 'Harga'
+    harga_formatted.admin_order_field = 'harga'
     
     def foto_preview(self, obj):
         if obj.foto:
@@ -151,12 +157,12 @@ class BarangAdmin(admin.ModelAdmin):
         delete_icon = f'<a href="{delete_url}" title="Hapus"><i class="fas fa-trash-alt" style="color: red;"></i></a>'
         return format_html(f'{edit_icon} &nbsp; {delete_icon}')
     aksi_link.short_description = 'Aksi'
-    
+
 
 # --- Inline dan Admin Class untuk Penyewaan ---
 class DetailSewaInline(admin.TabularInline):
     model = DetailSewa
-    fields = ('idBarang', 'jumlahBarang', 'subTotal')
+    fields = ('idBarang', 'jumlahBarang', 'jumlahBermasalah', 'statusBarang', 'subTotal')
     readonly_fields = ('subTotal',) 
     extra = 1
 
@@ -165,7 +171,7 @@ class DetailSewaInline(admin.TabularInline):
 class PenyewaanAdmin(admin.ModelAdmin):
     inlines = [DetailSewaInline]
     list_display = (
-         'idPenyewaan', 'tanggalPesan', 'tanggalAcara', 'durasiSewa', 'totalBayar', 'statusSewa', 'idPelanggan', 'aksi_link'
+         'idPenyewaan', 'tanggalPesan', 'tanggalAcara', 'durasiSewa', 'total_bayar_formatted', 'statusSewa', 'idPelanggan', 'aksi_link'
     )
     search_fields = ('idPelanggan__namaPelanggan', 'statusSewa')
     list_filter = ('statusSewa', 'tanggalAcara')
@@ -180,6 +186,13 @@ class PenyewaanAdmin(admin.ModelAdmin):
         })
     )
     readonly_fields = ('totalBayar', 'tanggalPesan')
+    
+    def total_bayar_formatted(self, obj):
+        if obj.totalBayar:
+            return f"Rp {intcomma(obj.totalBayar)}"
+        return "Rp 0"
+    total_bayar_formatted.short_description = 'Total Bayar'
+    total_bayar_formatted.admin_order_field = 'totalBayar'
     
     def calculate_total_bayar(self, penyewaan_instance):
         total_sum = penyewaan_instance.detailsewa_set.aggregate(
@@ -200,6 +213,13 @@ class PenyewaanAdmin(admin.ModelAdmin):
         instances = formset.save(commit=False)
         for instance in instances:
             if isinstance(instance, DetailSewa):
+                # Update statusBarang based on jumlahBermasalah
+                if instance.jumlahBermasalah > 0 and instance.statusBarang == 'Baik':
+                    # Default to 'Rusak' if there are issues
+                    instance.statusBarang = 'Rusak'
+                elif instance.jumlahBermasalah == 0 and instance.statusBarang in ['Rusak', 'Hilang']:
+                    # Reset to 'Baik' if no issues
+                    instance.statusBarang = 'Baik'
                 instance.save() 
         
         formset.save_m2m()

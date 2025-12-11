@@ -441,6 +441,73 @@ from .forms import PelangganRegisterForm, PelangganLoginForm
 from .decorators import pelanggan_required
 
 
+def home_pelanggan(request):
+    """Display home page with static content"""
+    context = {}
+    return render(request, 'pelanggan/home.html', context)
+
+
+def katalog_barang(request):
+    """Display catalog of available products"""
+    barang_list = Barang.objects.filter(stok__gt=0).order_by('namaBarang')
+    
+    context = {
+        'barang_list': barang_list,
+    }
+    return render(request, 'pelanggan/barang.html', context)
+
+
+def add_to_cart(request, pk):
+    """Add item to cart"""
+    # Check if user is authenticated
+    if 'pelanggan_id' not in request.session:
+        messages.error(request, 'Anda harus login terlebih dahulu untuk menambahkan barang ke keranjang.')
+        return redirect('login_pelanggan')
+    
+    if request.method == 'POST':
+        try:
+            barang = get_object_or_404(Barang, idBarang=pk)
+            quantity = int(request.POST.get('quantity', 1))
+            
+            # Validate quantity
+            if quantity <= 0:
+                messages.error(request, 'Jumlah barang harus lebih dari 0.')
+                return redirect('katalog_barang')
+            
+            if quantity > barang.stok:
+                messages.error(request, f'Maaf, stok hanya tersedia {barang.stok} unit.')
+                return redirect('katalog_barang')
+            
+            # Get cart from session
+            cart = get_cart(request)
+            
+            # Add or update item in cart
+            if str(pk) in cart:
+                # Check if total quantity would exceed stock
+                current_qty = cart[str(pk)]['quantity']
+                if current_qty + quantity > barang.stok:
+                    messages.error(request, f'Maaf, stok hanya tersedia {barang.stok} unit. Anda sudah memiliki {current_qty} unit di keranjang.')
+                    return redirect('katalog_barang')
+                cart[str(pk)]['quantity'] += quantity
+            else:
+                cart[str(pk)] = {
+                    'barang_id': pk,
+                    'quantity': quantity,
+                    'harga': float(barang.harga),
+                    'nama': barang.namaBarang,
+                }
+            
+            # Save cart to session
+            save_cart(request, cart)
+            messages.success(request, f'{barang.namaBarang} berhasil ditambahkan ke keranjang.')
+            
+        except ValueError:
+            messages.error(request, 'Jumlah barang tidak valid.')
+        except Exception as e:
+            messages.error(request, 'Terjadi kesalahan saat menambahkan barang ke keranjang.')
+    
+    return redirect('katalog_barang')
+
 
 def get_cart(request):
     """Get cart from session or initialize empty cart"""
@@ -497,84 +564,24 @@ def view_cart(request):
     }
     return render(request, 'pelanggan/cart.html', context)
 
-def home_pelanggan(request):
-    """Display home page with static content"""
-    context = {}
-    return render(request, 'pelanggan/home.html', context)
 
-def katalog_barang(request):
-    """Display catalog of available products"""
-    barang_list = Barang.objects.filter(stok__gt=0).order_by('namaBarang')
-    
-    context = {
-        'barang_list': barang_list,
-    }
-    return render(request, 'pelanggan/barang.html', context)
-
-def add_to_cart(request, pk):
-    """Add item to cart"""
-    # Check if user is authenticated
-    if 'pelanggan_id' not in request.session:
-        messages.error(request, 'Anda harus login terlebih dahulu untuk menambahkan barang ke keranjang.')
-        return redirect('login_pelanggan')
-    
-    if request.method == 'POST':
-        try:
-            barang = get_object_or_404(Barang, idBarang=pk)
-            quantity = int(request.POST.get('quantity', 1))
-            
-            # Validate quantity
-            if quantity <= 0:
-                messages.error(request, 'Jumlah barang harus lebih dari 0.')
-                return redirect('katalog_barang')
-            
-            if quantity > barang.stok:
-                messages.error(request, f'Maaf, stok hanya tersedia {barang.stok} unit.')
-                return redirect('katalog_barang')
-            
-            # Get cart from session
-            cart = get_cart(request)
-            
-            # Add or update item in cart
-            if str(pk) in cart:
-                # Check if total quantity would exceed stock
-                current_qty = cart[str(pk)]['quantity']
-                if current_qty + quantity > barang.stok:
-                    messages.error(request, f'Maaf, stok hanya tersedia {barang.stok} unit. Anda sudah memiliki {current_qty} unit di keranjang.')
-                    return redirect('katalog_barang')
-                cart[str(pk)]['quantity'] += quantity
-            else:
-                cart[str(pk)] = {
-                    'barang_id': pk,
-                    'quantity': quantity,
-                    'harga': float(barang.harga),
-                    'nama': barang.namaBarang,
-                }
-            
-            # Save cart to session
-            save_cart(request, cart)
-            messages.success(request, f'{barang.namaBarang} berhasil ditambahkan ke keranjang.')
-            
-        except ValueError:
-            messages.error(request, 'Jumlah barang tidak valid.')
-        except Exception as e:
-            messages.error(request, 'Terjadi kesalahan saat menambahkan barang ke keranjang.')
-    
-    return redirect('katalog_barang')
-
-def checkout_view(request):
+@pelanggan_required
+def checkout(request):
     """Display checkout page with cart items and rental form"""
     cart = get_cart(request)
     
+    # Get pelanggan from session
+    pelanggan = get_pelanggan(request)
+    
     # Prepare cart items with full barang objects and calculated subtotals
     cart_items = []
-    total_amount = 0
+    total_daily_amount = 0
     
     for item_id, item_data in cart.items():
         try:
             barang = Barang.objects.get(idBarang=item_data['barang_id'])
             subtotal = barang.harga * item_data['quantity']
-            total_amount += subtotal
+            total_daily_amount += subtotal
             
             cart_items.append({
                 'barang': barang,
@@ -588,52 +595,45 @@ def checkout_view(request):
     
     context = {
         'cart_items': cart_items,
-        'total_amount': total_amount,
+        'total_daily_amount': total_daily_amount,
         'today': date.today().strftime('%Y-%m-%d'),
-        'cart_count': get_cart_count(request),
+        'pelanggan': pelanggan,  # Pass pelanggan data to template
     }
-    return render(request, 'customer/checkout.html', context)
+    return render(request, 'pelanggan/checkout.html', context)
 
+
+@pelanggan_required
 @transaction.atomic
-def process_rental(request):
+def process_checkout(request):
     """Process the rental form and create penyewaan and detailsewa records"""
-    print("--- DEBUG: process_rental REACHED ---") 
     if request.method == 'POST':
-        print("--- DEBUG: Method is POST. Full Data Received:", dict(request.POST))
-        # ... rest of your code
-    else:
-        print("--- DEBUG: Method is NOT POST. Current Method:", request.method)
         try:
             # Get cart
             cart = get_cart(request)
             if not cart:
                 messages.error(request, 'Keranjang Anda kosong. Silakan tambahkan barang terlebih dahulu.')
-                return redirect('customer_home')
+                return redirect('checkout')
             
-            # Get form data
-            nama_pelanggan = request.POST.get('namaPelanggan', '').strip()
-            no_hp = request.POST.get('noHp', '').strip()
+            # Get pelanggan from session
+            pelanggan = get_pelanggan(request)
+            
+            # Get form data (alamatPemasangan, tanggalAcara, durasiSewa only)
             alamat_pemasangan = request.POST.get('alamatPemasangan', '').strip()
             tanggal_acara_str = request.POST.get('tanggalAcara', '')
             durasi_sewa_str = request.POST.get('durasiSewa', '')
             
             # Validate required fields
-            print(f"--- DEBUG: Validating required fields - nama: {nama_pelanggan}, hp: {no_hp}, alamat: {alamat_pemasangan}, tanggal: {tanggal_acara_str}, durasi: {durasi_sewa_str}")
-            if not all([nama_pelanggan, no_hp, alamat_pemasangan, tanggal_acara_str, durasi_sewa_str]):
-                print("--- DEBUG: Required fields missing, redirecting to checkout")
+            if not all([alamat_pemasangan, tanggal_acara_str, durasi_sewa_str]):
                 messages.error(request, 'Semua field wajib diisi.')
                 return redirect('checkout')
             
             # Validate and parse tanggal_acara
             try:
                 tanggal_acara = datetime.strptime(tanggal_acara_str, '%Y-%m-%d').date()
-                print(f"--- DEBUG: Parsed tanggal_acara: {tanggal_acara}, today: {date.today()}")
-                # TEMPORARILY COMMENTED OUT FOR DEBUGGING
-                # if tanggal_acara < date.today():
-                #     messages.error(request, 'Tanggal acara harus hari ini atau di masa depan.')
-                #     return redirect('checkout')
-            except ValueError as ve:
-                print(f"--- DEBUG: Date parsing error: {ve}")
+                if tanggal_acara < date.today():
+                    messages.error(request, 'Tanggal acara harus hari ini atau di masa depan.')
+                    return redirect('checkout')
+            except ValueError:
                 messages.error(request, 'Format tanggal acara tidak valid.')
                 return redirect('checkout')
             
@@ -661,59 +661,56 @@ def process_rental(request):
                     messages.error(request, 'Ada barang dalam keranjang yang tidak lagi tersedia. Silakan perbarui keranjang Anda.')
                     return redirect('checkout')
             
-            # Handle Pelanggan - Check if exists, create if not
-            try:
-                # 1. Try to get existing customer by noHp
-                pelanggan = Pelanggan.objects.get(noHp=no_hp)
-                
-                # 2. If name is different, update the name (optional consistency)
-                if pelanggan.namaPelanggan != nama_pelanggan:
-                    pelanggan.namaPelanggan = nama_pelanggan
-                    pelanggan.save()
-                    
-            except Pelanggan.DoesNotExist:
-                # 3. If not exists, create a new customer
-                pelanggan = Pelanggan.objects.create(
-                    namaPelanggan=nama_pelanggan,
-                    noHp=no_hp
-                )
-                messages.info(request, "Data pelanggan baru berhasil didaftarkan.")
-            
-            # Create Penyewaan
-            penyewaan = Penyewaan.objects.create(
-                idPelanggan=pelanggan,
-                tanggalAcara=tanggal_acara,
-                durasiSewa=durasi_sewa,
-                alamatPemasangan=alamat_pemasangan,
-                tanggalPembongkaran=tanggal_pembongkaran,
-                statusSewa='Pending',  # Default status
-                totalBayar=None,  # Will be calculated by admin
-            )
-            
-            # Create DetailSewa for each item in cart
+            # Calculate total amount based on daily rate and duration
+            total_daily_amount = 0
             for item_id, item_data in cart.items():
                 barang = Barang.objects.get(idBarang=item_data['barang_id'])
-                DetailSewa.objects.create(
-                    idPenyewaan=penyewaan,
-                    idBarang=barang,
-                    jumlahBarang=item_data['quantity'],
-                    subTotal=None,  # Will be calculated by DetailSewa.save()
-                    statusBarang='Baik',  # Default status
+                subtotal = barang.harga * item_data['quantity']
+                total_daily_amount += subtotal
+            
+            total_amount = total_daily_amount * durasi_sewa
+            
+            # Create Penyewaan
+            try:
+                penyewaan = Penyewaan.objects.create(
+                    idPelanggan=pelanggan,
+                    tanggalAcara=tanggal_acara,
+                    durasiSewa=durasi_sewa,
+                    alamatPemasangan=alamat_pemasangan,
+                    tanggalPembongkaran=tanggal_pembongkaran,
+                    statusSewa='Pending',  # Default status
+                    totalBayar=total_amount,  # Set calculated total
                 )
+            except Exception as e:
+                messages.error(request, f'Gagal membuat data penyewaan: {str(e)}')
+                return redirect('checkout')
+            
+            # Create DetailSewa for each item in cart
+            try:
+                for item_id, item_data in cart.items():
+                    barang = Barang.objects.get(idBarang=item_data['barang_id'])
+                    detail_sewa = DetailSewa.objects.create(
+                        idPenyewaan=penyewaan,
+                        idBarang=barang,
+                        jumlahBarang=item_data['quantity'],
+                        subTotal=None,  # Will be calculated by DetailSewa.save()
+                        statusBarang='Baik',  # Default status
+                    )
+            except Exception as e:
+                messages.error(request, f'Gagal menyimpan detail sewa: {str(e)}')
+                # If there's an error creating DetailSewa, we should delete the Penyewaan
+                penyewaan.delete()
+                return redirect('checkout')
             
             # Clear cart
             request.session['cart'] = {}
             request.session.modified = True
             
             # Success message
-            messages.success(request, f'Sewa berhasil diajukan dengan ID #{penyewaan.idPenyewaan}. Silakan tunggu konfirmasi dari admin.')
-            return redirect('history_lookup')
+            messages.success(request, f'Sewa berhasil diajukan dengan ID #{penyewaan.idPenyewaan}. Total biaya: Rp {total_amount:,}. Silakan tunggu konfirmasi dari admin.')
+            return redirect('rental_history')
             
         except Exception as e:
-            print(f"DATABASE ERROR: {e}")
-            print(f"ERROR TYPE: {type(e)}")
-            import traceback
-            traceback.print_exc()
             messages.error(request, f'Terjadi kesalahan saat memproses sewa: {str(e)}')
             return redirect('checkout')
     
@@ -791,25 +788,43 @@ def update_cart(request, pk):
             
             # Get action and current item
             action = request.POST.get('action')
+            quantity_str = request.POST.get('quantity')
             item = cart[str(pk)]
-            current_quantity = item['quantity']
             barang = get_object_or_404(Barang, idBarang=pk)
             
-            # Update quantity based on action
-            if action == 'increase':
-                if current_quantity < barang.stok:
-                    cart[str(pk)]['quantity'] += 1
-                    messages.success(request, f'Jumlah {barang.namaBarang} berhasil ditambah.')
-                else:
-                    messages.error(request, f'Stok {barang.namaBarang} hanya tersedia {barang.stok} unit.')
-            elif action == 'decrease':
-                if current_quantity > 1:
-                    cart[str(pk)]['quantity'] -= 1
-                    messages.success(request, f'Jumlah {barang.namaBarang} berhasil dikurangi.')
-                else:
-                    # If quantity is 1, remove the item
-                    del cart[str(pk)]
-                    messages.success(request, f'{barang.namaBarang} berhasil dihapus dari keranjang.')
+            # Handle manual quantity input
+            if quantity_str is not None:
+                try:
+                    new_quantity = int(quantity_str)
+                    if new_quantity < 1:
+                        messages.error(request, 'Jumlah barang minimal 1.')
+                        return redirect('view_cart')
+                    elif new_quantity > barang.stok:
+                        messages.error(request, f'Stok {barang.namaBarang} hanya tersedia {barang.stok} unit.')
+                        return redirect('view_cart')
+                    else:
+                        cart[str(pk)]['quantity'] = new_quantity
+                        messages.success(request, f'Jumlah {barang.namaBarang} berhasil diubah menjadi {new_quantity}.')
+                except ValueError:
+                    messages.error(request, 'Jumlah barang tidak valid.')
+                    return redirect('view_cart')
+            # Handle increment/decrement actions
+            elif action:
+                current_quantity = item['quantity']
+                if action == 'increase':
+                    if current_quantity < barang.stok:
+                        cart[str(pk)]['quantity'] += 1
+                        messages.success(request, f'Jumlah {barang.namaBarang} berhasil ditambah.')
+                    else:
+                        messages.error(request, f'Stok {barang.namaBarang} hanya tersedia {barang.stok} unit.')
+                elif action == 'decrease':
+                    if current_quantity > 1:
+                        cart[str(pk)]['quantity'] -= 1
+                        messages.success(request, f'Jumlah {barang.namaBarang} berhasil dikurangi.')
+                    else:
+                        # If quantity is 1, remove the item
+                        del cart[str(pk)]
+                        messages.success(request, f'{barang.namaBarang} berhasil dihapus dari keranjang.')
             
             # Save updated cart
             save_cart(request, cart)
@@ -893,144 +908,3 @@ def logout_pelanggan(request):
     return redirect('home_pelanggan')
 
 from .decorators import pelanggan_required
-
-@pelanggan_required
-def checkout(request):
-    """Display checkout page with cart items and rental form"""
-    cart = get_cart(request)
-    
-    # Get pelanggan from session
-    pelanggan = get_pelanggan(request)
-    
-    # Prepare cart items with full barang objects and calculated subtotals
-    cart_items = []
-    total_amount = 0
-    
-    for item_id, item_data in cart.items():
-        try:
-            barang = Barang.objects.get(idBarang=item_data['barang_id'])
-            subtotal = barang.harga * item_data['quantity']
-            total_amount += subtotal
-            
-            cart_items.append({
-                'barang': barang,
-                'quantity': item_data['quantity'],
-                'subtotal': subtotal,
-            })
-        except Barang.DoesNotExist:
-            # Remove invalid items from cart
-            del cart[item_id]
-            save_cart(request, cart)
-    
-    context = {
-        'cart_items': cart_items,
-        'total_amount': total_amount,
-        'today': date.today().strftime('%Y-%m-%d'),
-        'pelanggan': pelanggan,  # Pass pelanggan data to template
-    }
-    return render(request, 'pelanggan/checkout.html', context)
-
-@pelanggan_required
-@transaction.atomic
-def process_checkout(request):
-    """Process the rental form and create penyewaan and detailsewa records"""
-    if request.method == 'POST':
-        try:
-            # Get cart
-            cart = get_cart(request)
-            if not cart:
-                messages.error(request, 'Keranjang Anda kosong. Silakan tambahkan barang terlebih dahulu.')
-                return redirect('checkout')
-            
-            # Get pelanggan from session
-            pelanggan = get_pelanggan(request)
-            
-            # Get form data (alamatPemasangan, tanggalAcara, durasiSewa only)
-            alamat_pemasangan = request.POST.get('alamatPemasangan', '').strip()
-            tanggal_acara_str = request.POST.get('tanggalAcara', '')
-            durasi_sewa_str = request.POST.get('durasiSewa', '')
-            
-            # Validate required fields
-            if not all([alamat_pemasangan, tanggal_acara_str, durasi_sewa_str]):
-                messages.error(request, 'Semua field wajib diisi.')
-                return redirect('checkout')
-            
-            # Validate and parse tanggal_acara
-            try:
-                tanggal_acara = datetime.strptime(tanggal_acara_str, '%Y-%m-%d').date()
-                if tanggal_acara < date.today():
-                    messages.error(request, 'Tanggal acara harus hari ini atau di masa depan.')
-                    return redirect('checkout')
-            except ValueError:
-                messages.error(request, 'Format tanggal acara tidak valid.')
-                return redirect('checkout')
-            
-            # Validate and parse durasi_sewa
-            try:
-                durasi_sewa = int(durasi_sewa_str)
-                if durasi_sewa <= 0:
-                    messages.error(request, 'Durasi sewa harus lebih dari 0 hari.')
-                    return redirect('checkout')
-            except ValueError:
-                messages.error(request, 'Durasi sewa harus berupa angka.')
-                return redirect('checkout')
-            
-            # Calculate tanggal_pembongkaran
-            tanggal_pembongkaran = tanggal_acara + timedelta(days=durasi_sewa)
-            
-            # Check if all items in cart are still available
-            for item_id, item_data in cart.items():
-                try:
-                    barang = Barang.objects.get(idBarang=item_data['barang_id'])
-                    if item_data['quantity'] > barang.stok:
-                        messages.error(request, f'Stok untuk {barang.namaBarang} tidak mencukupi. Silakan perbarui keranjang Anda.')
-                        return redirect('checkout')
-                except Barang.DoesNotExist:
-                    messages.error(request, 'Ada barang dalam keranjang yang tidak lagi tersedia. Silakan perbarui keranjang Anda.')
-                    return redirect('checkout')
-            
-            # Create Penyewaan
-            try:
-                penyewaan = Penyewaan.objects.create(
-                    idPelanggan=pelanggan,
-                    tanggalAcara=tanggal_acara,
-                    durasiSewa=durasi_sewa,
-                    alamatPemasangan=alamat_pemasangan,
-                    tanggalPembongkaran=tanggal_pembongkaran,
-                    statusSewa='Pending',  # Default status
-                    totalBayar=None,  # Will be calculated by admin
-                )
-            except Exception as e:
-                messages.error(request, f'Gagal membuat data penyewaan: {str(e)}')
-                return redirect('checkout')
-            
-            # Create DetailSewa for each item in cart
-            try:
-                for item_id, item_data in cart.items():
-                    barang = Barang.objects.get(idBarang=item_data['barang_id'])
-                    detail_sewa = DetailSewa.objects.create(
-                        idPenyewaan=penyewaan,
-                        idBarang=barang,
-                        jumlahBarang=item_data['quantity'],
-                        subTotal=None,  # Will be calculated by DetailSewa.save()
-                        statusBarang='Baik',  # Default status
-                    )
-            except Exception as e:
-                messages.error(request, f'Gagal menyimpan detail sewa: {str(e)}')
-                # If there's an error creating DetailSewa, we should delete the Penyewaan
-                penyewaan.delete()
-                return redirect('checkout')
-            
-            # Clear cart
-            request.session['cart'] = {}
-            request.session.modified = True
-            
-            # Success message
-            messages.success(request, f'Sewa berhasil diajukan dengan ID #{penyewaan.idPenyewaan}. Silakan tunggu konfirmasi dari admin.')
-            return redirect('rental_history')
-            
-        except Exception as e:
-            messages.error(request, f'Terjadi kesalahan saat memproses sewa: {str(e)}')
-            return redirect('checkout')
-    
-    return redirect('checkout')
